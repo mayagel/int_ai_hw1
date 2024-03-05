@@ -63,8 +63,11 @@ class BFSAgent():
         # print(type(root))
 
         root.DballUpdate(self.env)
+
         while OPEN:
             n = OPEN.pop(0)
+            print(n.state)
+
             # print(type(self.env))
             # print(type(n))
             n.DballUpdate(self.env)
@@ -75,14 +78,20 @@ class BFSAgent():
                 self.expanded += 1
                 # print(self.env.succ(n.state))
                 for action in self.env.succ(n.state):
-                    if action in CLOSED or self.env.succ(n.state)[action][0] == None:
+                    new_state = self.env.succ(n.state)[action][0]
+                    # if new_state equals to some state inside OPEN or new_state in CLOSED or new_state == None: continue
+                    for node in OPEN:
+                        if node.state == new_state:
+                            continue
+                    if new_state in CLOSED or new_state == None:
                         continue
-                    child = Node(self.env.succ(n.state)[action][0], n)
+                    child = Node(new_state, n)
                     child.cost = n.cost + self.env.succ(n.state)[action][1]
                     # print(type(self.env))
                     # print(type(child))
                     child.DballUpdate(self.env)
                     OPEN.append(child)
+        return ([], 0, self.expanded)
 
 
 class WeightedAStarAgent():
