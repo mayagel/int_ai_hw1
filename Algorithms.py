@@ -7,7 +7,7 @@ class Node:
     def __init__(self, state, parent):
         self.state = state
         self.parent = parent
-        self.cost = 1
+        self.cost = 0
         self.h = 0
         self.g = 0
 
@@ -23,14 +23,11 @@ class Node:
         return self.state == other.state
     
     def DballUpdate(self, env: DragonBallEnv):
-        d1 = (env.get_state()[0] == env.d1[0])
-        d2 = (env.get_state()[0] == env.d2[0])
-
-        if self.parent is not None:
+        d1 = (self.state[0] == env.d1[0])
+        d2 = (self.state[0] == env.d2[0])
+        if self.parent:
             d1 = self.parent.state[1] or d1
             d2 = self.parent.state[2] or d2
-        
-        # print(type(self.state))
         self.state = (self.state[0], d1, d2)
 
 def solution(node: Node, env: DragonBallEnv) -> List[int]:
@@ -62,41 +59,32 @@ class BFSAgent():
         CLOSED = []
         root = Node(env.get_state(), None)
         OPEN.append(root)
-        # print(type(self.env))
-        # print(type(root))
 
         root.DballUpdate(self.env)
 
         while OPEN:
             n = OPEN.pop(0)
             print(n.state)
-
-            # print(type(self.env))
-            # print(type(n))
-            n.DballUpdate(self.env)
+            # n.DballUpdate(self.env) 
             if self.env.is_final_state(n.state):
                 return (solution(n, env), n.cost, self.expanded)
-            if n.state not in CLOSED:
-                CLOSED.append(n.state)
-                self.expanded += 1
-                # print(self.env.succ(n.state))
-                for action in self.env.succ(n.state):
-                    new_state = self.env.succ(n.state)[action][0]
-                    # if new_state equals to some state inside OPEN or new_state in CLOSED or new_state == None: continue
-                    in_close = False
-                    if new_state == None:
-                        continue
-                    for state in CLOSED:
-                        if state[0] == new_state[0]:
-                            in_close = True
-                            break
-                    if new_state in OPEN or in_close:
-                        continue
-                    child = Node(new_state, n)
-                    child.cost = n.cost + self.env.succ(n.state)[action][1]
-                    # print(type(self.env))
-                    # print(type(child))
-                    child.DballUpdate(self.env)
+            # if n.state not in CLOSED and CLOSED:
+            self.expanded += 1
+            CLOSED.append(n.state)
+            # self.expanded += 1
+            for action in self.env.succ(n.state):
+                new_state = self.env.succ(n.state)[action][0]
+                if new_state == None or new_state[0] == n.state[0]:
+                    continue
+                n.DballUpdate(self.env)
+                pre_row, pre_col = env.to_row_col(n.state)
+                row, col = env.inc(pre_row, pre_col, action)
+                new_state = (self.env.to_state(row, col)[0], n.state[1], n.state[2])
+               
+                child = Node(new_state, n)
+                child.DballUpdate(self.env)
+                child.cost = n.cost + self.env.succ(n.state)[action][1]
+                if child.state not in CLOSED and child.state not in OPEN:
                     OPEN.append(child)
         return ([], 0, self.expanded)
 

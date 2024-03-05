@@ -184,7 +184,6 @@ class DragonBallEnv(Env):
         if self.collected_dragon_balls[1] == False:
             self.collected_dragon_balls[1] = state[2]
 
-
     def get_state(self):
         """
         Returns the current state of the agent.
