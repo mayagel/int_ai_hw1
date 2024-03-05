@@ -4,15 +4,15 @@ from DragonBallEnv import DragonBallEnv
 from typing import List, Tuple
 import heapdict
 class Node:
-    def __init__(self, state, parent):
-        self.state = state
+    def __init__(self, env, parent):
+        self.env = env
         self.parent = parent
-        self.cost = 1
+        self.cost = 0
         self.h = 0
         self.g = 0
 
-    def __eq__(self, other):
-        return (self.state[0] == other[0])
+    # def __eq__(self, other):
+    #     return (self.state[0] == other[0])
     
     #method to compare nodes
     def fValueComp(self, other):
@@ -30,14 +30,13 @@ class Node:
             d1 = self.parent.state[1] or d1
             d2 = self.parent.state[2] or d2
         
-        # print(type(self.state))
         self.state = (self.state[0], d1, d2)
 
 def solution(node: Node, env: DragonBallEnv) -> List[int]:
     path = []
     while node.parent:
-        loc = env.to_row_col(node.state)
-        loc_p = env.to_row_col(node.parent.state)
+        loc = node.env.to_row_col(node.env.get_state())
+        loc_p = node.env.to_row_col(node.parent.env.get_state())
         if loc[0] > loc_p[0]:
             path.append(0)
         elif loc[1] > loc_p[1]:
@@ -51,52 +50,39 @@ def solution(node: Node, env: DragonBallEnv) -> List[int]:
 
 class BFSAgent():
     def __init__(self) -> None:
-        self.env = None
+        root = None
         self.expanded = 0
 
     def search(self, env: DragonBallEnv) -> Tuple[List[int], float, int]:
-        self.env = env
-        self.env.reset()
+        root_env = env
+        root_env.reset()
+        root = Node(root_env, None)
         self.expanded = 0
         OPEN = []
         CLOSED = []
-        root = Node(env.get_state(), None)
         OPEN.append(root)
-        # print(type(self.env))
-        # print(type(root))
-
-        root.DballUpdate(self.env)
-
         while OPEN:
             n = OPEN.pop(0)
-            print(n.state)
-
-            # print(type(self.env))
-            # print(type(n))
-            n.DballUpdate(self.env)
-            if self.env.is_final_state(n.state):
+            print(n.env.get_state())
+            if n.env.is_final_state(n.env.get_state()):
                 return (solution(n, env), n.cost, self.expanded)
-            if n.state not in CLOSED:
-                CLOSED.append(n.state)
-                self.expanded += 1
-                # print(self.env.succ(n.state))
-                for action in self.env.succ(n.state):
-                    new_state = self.env.succ(n.state)[action][0]
-                    # if new_state equals to some state inside OPEN or new_state in CLOSED or new_state == None: continue
-                    in_close = False
-                    if new_state == None:
-                        continue
-                    for state in CLOSED:
-                        if state[0] == new_state[0]:
-                            in_close = True
-                            break
-                    if new_state in OPEN or in_close:
-                        continue
-                    child = Node(new_state, n)
-                    child.cost = n.cost + self.env.succ(n.state)[action][1]
-                    # print(type(self.env))
-                    # print(type(child))
-                    child.DballUpdate(self.env)
+            CLOSED.append(n.env.get_state())
+            self.expanded += 1
+            for action in n.env.succ(n.env.get_state()):
+                print(action)
+                new_env = DragonBallEnv(env.desc)
+                new_env.set_state(n.env.get_state())
+                try:
+                    new_state, new_cost, ter= new_env.step(action)
+                except:
+                    continue
+
+                if new_state == None or new_state == n.env.get_state():
+                    print("Invalid state")
+                    continue
+                child = Node(new_env, n)
+                child.cost = n.cost + new_cost
+                if(child.env.get_state() not in CLOSED and child not in OPEN):
                     OPEN.append(child)
         return ([], 0, self.expanded)
 
