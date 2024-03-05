@@ -68,6 +68,7 @@ class BFSAgent():
             # n.DballUpdate(self.env) 
             if self.env.is_final_state(n.state):
                 return (solution(n, env), n.cost, self.expanded)
+            # if n.state not in CLOSED and CLOSED:
             self.expanded += 1
             CLOSED.append(n.state)
             # self.expanded += 1
