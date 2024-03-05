@@ -84,11 +84,13 @@ class BFSAgent():
                     new_state = self.env.succ(n.state)[action][0]
                     # if new_state equals to some state inside OPEN or new_state in CLOSED or new_state == None: continue
                     in_close = False
+                    if new_state == None:
+                        continue
                     for state in CLOSED:
                         if state[0] == new_state[0]:
                             in_close = True
                             break
-                    if new_state in OPEN or in_close or new_state == None:
+                    if new_state in OPEN or in_close:
                         continue
                     child = Node(new_state, n)
                     child.cost = n.cost + self.env.succ(n.state)[action][1]
