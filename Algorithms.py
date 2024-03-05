@@ -11,6 +11,9 @@ class Node:
         self.h = 0
         self.g = 0
 
+    def __eq__(self, other):
+        return (self.state[0] == other[0])
+    
     #method to compare nodes
     def fValueComp(self, other):
         return self.cost + self.h < other.cost + other.h
@@ -80,10 +83,12 @@ class BFSAgent():
                 for action in self.env.succ(n.state):
                     new_state = self.env.succ(n.state)[action][0]
                     # if new_state equals to some state inside OPEN or new_state in CLOSED or new_state == None: continue
-                    for node in OPEN:
-                        if node.state == new_state:
-                            continue
-                    if new_state in CLOSED or new_state == None:
+                    in_close = False
+                    for state in CLOSED:
+                        if state[0] == new_state[0]:
+                            in_close = True
+                            break
+                    if new_state in OPEN or in_close or new_state == None:
                         continue
                     child = Node(new_state, n)
                     child.cost = n.cost + self.env.succ(n.state)[action][1]
