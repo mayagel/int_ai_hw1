@@ -1,4 +1,5 @@
 import numpy as np
+import copy
 
 from DragonBallEnv import DragonBallEnv
 from typing import List, Tuple
@@ -11,8 +12,8 @@ class Node:
         self.h = 0
         self.g = 0
 
-    # def __eq__(self, other):
-    #     return (self.state[0] == other[0])
+    def __eq__(self, other):
+        return (self.env.get_state() == other.env.get_state())
     
     #method to compare nodes
     def fValueComp(self, other):
@@ -56,35 +57,32 @@ class BFSAgent():
     def search(self, env: DragonBallEnv) -> Tuple[List[int], float, int]:
         root_env = env
         root_env.reset()
-        root = Node(root_env, None)
         self.expanded = 0
+        root = Node(root_env, None)
         OPEN = []
         CLOSED = []
         OPEN.append(root)
         while OPEN:
             n = OPEN.pop(0)
-            print(n.env.get_state())
+            if not (n.env.get_state() in CLOSED):
+                self.expanded += 1
             if n.env.is_final_state(n.env.get_state()):
                 return (solution(n, env), n.cost, self.expanded)
             CLOSED.append(n.env.get_state())
-            self.expanded += 1
-            for action in n.env.succ(n.env.get_state()):
-                print(action)
-                new_env = DragonBallEnv(env.desc)
-                new_env.set_state(n.env.get_state())
-                try:
-                    new_state, new_cost, ter= new_env.step(action)
-                except:
+            for action, (state, cost, terminated) in n.env.succ(n.env.get_state()).items():
+                if state == None or n.env.get_state() == state:
                     continue
-
-                if new_state == None or new_state == n.env.get_state():
-                    print("Invalid state")
-                    continue
+                new_env = copy.deepcopy(n.env)
+                new_state, new_cost, ter= new_env.step(action)
                 child = Node(new_env, n)
+                child.state = new_state
+                child.terminated = ter
                 child.cost = n.cost + new_cost
                 if(child.env.get_state() not in CLOSED and child not in OPEN):
                     OPEN.append(child)
-        return ([], 0, self.expanded)
+                if n.env.is_final_state(n.env.get_state()):
+                    return (solution(n, env), n.cost, self.expanded)
+        return ([], 0, 0)
 
 
 class WeightedAStarAgent():
