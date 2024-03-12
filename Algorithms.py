@@ -38,7 +38,6 @@ def solution(node: Node, env: DragonBallEnv) -> List[int]:
         node = node.father
     return path[::-1]
 
-
 class Agent:
     def __init__(self) -> None:
         self.root_env = None
@@ -57,6 +56,7 @@ class Agent:
 
     def search(self, env: DragonBallEnv) -> Tuple[List[int], float, int]:
         raise NotImplementedError("Subclasses must implement the search method.")
+
 class BFSAgent(Agent):
 
     def search(self, env: DragonBallEnv) -> Tuple[List[int], float, int]:
@@ -86,8 +86,8 @@ class WeightedAStarAgent(Agent):
         self.b4Search(env)
         self.h_weight = h_weight
         if self.root_env.is_final_state(self.root_env.get_state()):
-            return solution(node, self.root_env, self.expanded)
-        while not len(self.OPEN) == 0:
+            return (solution(node, env), node.cost, self.expanded)
+        while self.OPEN:
             node = self.OPEN.pop(get_minimal_f_node(self.OPEN))
             if node not in self.CLOSE:
                 self.expanded += 1
@@ -100,7 +100,6 @@ class WeightedAStarAgent(Agent):
                 new_env = copy.deepcopy(node.env)
                 new_env.step(action)
                 child = Node(new_env, node)
-                child.cost = cost + node.cost
                 self.set_node_state(child, cost, terminated)
                 if not update_open(child, self.OPEN) and not update_close(child, self.OPEN, self.CLOSE):
                     self.OPEN.append(child)
@@ -114,6 +113,61 @@ class WeightedAStarAgent(Agent):
         node.set_f_a(self.h_weight)
         node.terminated = terminated
         node.cost = cost + node.father.cost
+
+class AStarEpsilonAgent(Agent):
+    def __init__(self) -> None:
+        self.epsilon = 0
+
+    def search(self, env: DragonBallEnv, epsilon: int) -> Tuple[List[int], float, int]:
+        self.b4Search(env)
+        self.epsilon = epsilon
+        node = Node(self.root_env, None)
+        node.h = heuristic_calculation(self.root_env, node)
+        node.set_f_epsilon()
+        self.OPEN.append(node)
+        if env.is_final_state(node.env.get_state()):
+            return (solution(node, env), node.cost, self.expanded)
+        while not len(self.OPEN) == 0:
+            node = self.OPEN.pop(self.get_node_index_to_expanded())
+            if self.root_env.is_final_state(node.env.get_state()):
+                return (solution(node, env), node.cost, self.expanded)
+            self.expanded += 1
+            self.CLOSE.append(node)
+            if self.root_env.is_final_state(node.env.get_state()):
+                return (solution(node, env), node.cost, self.expanded)
+            for action, (state, cost, terminated) in env.succ(node.env.get_state()).items():
+                if state == None or node.env.get_state() == state:
+                    continue
+                new_env = copy.deepcopy(node.env)
+                new_env.step(action)
+                child = Node(new_env, node)
+                self.set_node_state(child, cost, terminated)
+                if not update_open(child, self.OPEN) and not update_close(child, self.OPEN, self.CLOSE):
+                    self.OPEN.append(child)
+
+    def set_node_state(self, node: Node, cost, terminated):
+        node.g = cost + node.father.g
+        node.h = heuristic_calculation(self.root_env, node)
+        node.set_f_epsilon()
+        node.terminated = terminated
+        node.cost = cost + node.father.cost
+
+    def get_node_index_to_expanded(self):
+        min_f_index = get_minimal_f_node(self.OPEN)
+        min_value = self.OPEN[min_f_index].f * (1+self.epsilon)
+        min_g = self.OPEN[min_f_index].g
+        node_index_to_return = min_f_index
+        curr_location = self.OPEN[node_index_to_return].env.get_state()[0]
+        for i, e in enumerate(self.OPEN):
+            if e.f <= min_value:
+                if e.g < min_g:
+                    min_g = e.g
+                    curr_location = e.env.get_state()[0]
+                    node_index_to_return = i
+                if e.g == min_g and e.env.get_state()[0] < curr_location:
+                    curr_location = e.env.get_state()[0]
+                    node_index_to_return = i
+        return node_index_to_return
 
 
 def heuristic_calculation(env, node: Node) -> int:
@@ -133,12 +187,8 @@ def heuristic_calculation(env, node: Node) -> int:
     min_val = min(min_val, calculate_manhattan_distance(env, node.env.get_state(), dragon_ball_2_state))
     return min_val
 
-
 def calculate_manhattan_distance(env, p, g):
-    p_row, p_col = env.to_row_col(p)
-    g_row, g_col = env.to_row_col(g)
-    return abs(p_row - g_row) + abs(p_col - g_col)
-
+    return abs(p[0] - g[0]) + abs(p[1] - g[1])
 
 def get_minimal_f_node(OPEN):
     min_val = OPEN[0].f
@@ -173,64 +223,3 @@ def update_close(node: Node, OPEN, CLOSE):
             return True
     return False
 
-
-class AStarEpsilonAgent():
-    def __init__(self) -> None:
-        self.epsilon = 0
-
-    def search(self, env: DragonBallEnv, epsilon: int) -> Tuple[List[int], float, int]:
-        self.root_env = env
-        self.root_env.reset()
-        self.OPEN = []
-        self.CLOSE = []
-        self.expanded = 0
-        self.epsilon = epsilon
-        node = Node(self.root_env, None)
-        node.h = heuristic_calculation(self.root_env, node)
-        node.set_f_epsilon()
-        node.update_dragon_ball(self.root_env)
-        self.OPEN.append(node)
-        if env.is_final_state(node.env.get_state()):
-            return solution(node, self.root_env, self.expanded)
-        while not len(self.OPEN) == 0:
-            node = self.OPEN.pop(self.get_node_index_to_expanded())
-            if self.root_env.is_final_state(node.env.get_state()):
-                return solution(node, self.root_env, self.expanded)
-            self.expanded += 1
-            self.CLOSE.append(node)
-            if self.root_env.is_final_state(node.env.get_state()):
-                return solution(node, self.root_env, self.expanded)
-            for action, (state, cost, terminated) in env.succ(node.env.get_state()).items():
-                if state == None or node.env.get_state() == state:
-                    continue
-                node.update_dragon_ball(self.root_env)
-                new_state = (state[0], node.env.get_state()[1], node.env.get_state()[2])
-                child = Node(new_state, node)
-                child.update_dragon_ball(self.root_env)
-                self.set_node_state(child, cost, terminated)
-                if not update_open(child, self.OPEN) and not update_close(child, self.OPEN, self.CLOSE):
-                    self.OPEN.append(child)
-
-    def set_node_state(self, node: Node, cost, terminated):
-        node.g = cost + node.father.g
-        node.h = heuristic_calculation(self.root_env, node)
-        node.set_f_epsilon()
-        node.terminated = terminated
-        node.cost = cost + node.father.cost
-
-    def get_node_index_to_expanded(self):
-        min_f_index = get_minimal_f_node(self.OPEN)
-        min_value = self.OPEN[min_f_index].f * (1+self.epsilon)
-        min_g = self.OPEN[min_f_index].g
-        node_index_to_return = min_f_index
-        curr_location = self.OPEN[node_index_to_return].get_state()[0]
-        for i, e in enumerate(self.OPEN):
-            if e.f <= min_value:
-                if e.g < min_g:
-                    min_g = e.g
-                    curr_location = e.get_state()[0]
-                    node_index_to_return = i
-                if e.g == min_g and e.get_state()[0] < curr_location:
-                    curr_location = e.get_state()[0]
-                    node_index_to_return = i
-        return node_index_to_return
