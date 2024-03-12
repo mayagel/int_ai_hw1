@@ -57,7 +57,35 @@ class Agent:
 
     def search(self, env: DragonBallEnv) -> Tuple[List[int], float, int]:
         raise NotImplementedError("Subclasses must implement the search method.")
+
+class BFSAgentInherit(Agent):
+    def search(self, env: DragonBallEnv) -> Tuple[List[int], float, int]:
+        self.b4Search(env)
+        while self.OPEN:
+            node = self.OPEN.pop(0)
+            if node.env.get_state() not in self.CLOSE:
+                self.expanded += 1
+            self.CLOSE.append(node.env.get_state())
+            for action, (state, cost, terminated) in node.env.succ(node.env.get_state()).items():
+                if state == None or node.env.get_state() == state:
+                    continue
+                new_env = copy.deepcopy(node.env)
+                new_env.step(action)
+                child = Node(new_env, node)
+                child.cost = cost + node.cost
+                if child.env.get_state() not in self.CLOSE and child not in self.OPEN:
+                    self.OPEN.append(child)
+                if node.env.is_final_state(child.env.get_state()):
+                    return (solution(node, env), node.cost, self.expanded)
+
+
+
 class BFSAgent(Agent):
+    def __init__(self) -> None:
+        self.root_env = None
+        self.OPEN = []
+        self.CLOSE = []
+        self.expanded = 0
 
     def search(self, env: DragonBallEnv) -> Tuple[List[int], float, int]:
         self.b4Search(env)
@@ -80,11 +108,14 @@ class BFSAgent(Agent):
 
 class WeightedAStarAgent(Agent):
     def __init__(self) -> None:
+        self.root_env = None
         self.h_weight = None
+        self.expanded = 0
+        self.OPEN = []
+        self.CLOSE = []
     
     def search(self, env: DragonBallEnv, h_weight) -> Tuple[List[int], float, int]:
-        self.b4Search(env)
-        self.h_weight = h_weight
+        self.b4Search(env, h_weight)
         if self.root_env.is_final_state(self.root_env.get_state()):
             return solution(node, self.root_env, self.expanded)
         while not len(self.OPEN) == 0:
@@ -176,7 +207,11 @@ def update_close(node: Node, OPEN, CLOSE):
 
 class AStarEpsilonAgent():
     def __init__(self) -> None:
+        self.root_env = None
+        self.expanded = 0
         self.epsilon = 0
+        self.OPEN = []
+        self.CLOSE = []
 
     def search(self, env: DragonBallEnv, epsilon: int) -> Tuple[List[int], float, int]:
         self.root_env = env
